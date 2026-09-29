@@ -31,16 +31,12 @@ export interface StoredCar {
   isPhoneVisible: boolean;
   documentStatusType: string;
   documentProblemDesc: string | null;
-  images: string[]; // filenames of medium size for now
+  images: string[];
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
-/**
- * In-memory Car store for Task 4.
- * Will be replaced by Prisma repository in later tasks.
- */
 @Injectable()
 export class CarsService {
   private readonly cars = new Map<string, StoredCar>();
@@ -101,17 +97,36 @@ export class CarsService {
     yearTo?: number;
     minPrice?: number;
     maxPrice?: number;
+    search?: string;
   }): StoredCar[] {
     let list = Array.from(this.cars.values()).filter((c) => c.isActive);
 
-    if (filters?.brand) list = list.filter((c) => c.brand.includes(filters.brand!));
-    if (filters?.model) list = list.filter((c) => c.model.includes(filters.model!));
+    if (filters?.brand) {
+      const q = filters.brand.toLowerCase();
+      list = list.filter((c) => c.brand.toLowerCase().includes(q));
+    }
+    if (filters?.model) {
+      const q = filters.model.toLowerCase();
+      list = list.filter((c) => c.model.toLowerCase().includes(q));
+    }
     if (filters?.yearFrom) list = list.filter((c) => c.year >= filters.yearFrom!);
     if (filters?.yearTo) list = list.filter((c) => c.year <= filters.yearTo!);
     if (filters?.minPrice) list = list.filter((c) => c.priceAmount >= filters.minPrice!);
     if (filters?.maxPrice) list = list.filter((c) => c.priceAmount <= filters.maxPrice!);
 
-    return list;
+    if (filters?.search) {
+      const q = filters.search.toLowerCase();
+      list = list.filter(
+        (c) =>
+          c.brand.toLowerCase().includes(q) ||
+          c.model.toLowerCase().includes(q) ||
+          c.trim.toLowerCase().includes(q) ||
+          c.color.toLowerCase().includes(q),
+      );
+    }
+
+    // newest first
+    return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   updateVisibility(id: string, ownerId: string, isPhoneVisible: boolean): StoredCar {

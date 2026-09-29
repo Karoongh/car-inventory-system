@@ -29,13 +29,12 @@ export class CarsController {
 
   constructor(private readonly carsService: CarsService) {}
 
-  /** Create car with optional images */
   @Post()
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(
     FilesInterceptor('images', 10, {
       storage: memoryStorage(),
-      limits: { fileSize: 8 * 1024 * 1024 }, // 8MB
+      limits: { fileSize: 8 * 1024 * 1024 },
       fileFilter: (_req, file, cb) => {
         if (!file.mimetype.match(/^image\/(jpeg|png|webp|jpg)$/)) {
           return cb(new BadRequestException('فقط فایل‌های تصویری مجاز هستند'), false);
@@ -54,7 +53,6 @@ export class CarsController {
     if (files && files.length > 0) {
       for (const file of files) {
         const processed = await this.imageProcessor.process(file.buffer, file.originalname);
-        // store the medium size filename for listing
         const medium = processed.find((p) => p.size === 'medium');
         if (medium) imageFilenames.push(medium.filename);
       }
@@ -65,7 +63,6 @@ export class CarsController {
     return { success: true, data: car };
   }
 
-  /** Public list with basic filters */
   @Get()
   findPublic(
     @Query('brand') brand?: string,
@@ -74,6 +71,7 @@ export class CarsController {
     @Query('yearTo') yearTo?: string,
     @Query('minPrice') minPrice?: string,
     @Query('maxPrice') maxPrice?: string,
+    @Query('search') search?: string,
   ) {
     const list = this.carsService.findPublic({
       brand,
@@ -82,9 +80,9 @@ export class CarsController {
       yearTo: yearTo ? Number(yearTo) : undefined,
       minPrice: minPrice ? Number(minPrice) : undefined,
       maxPrice: maxPrice ? Number(maxPrice) : undefined,
+      search,
     });
 
-    // hide phone if not visible
     const safe = list.map((c) => ({
       ...c,
       ownerMobile: c.isPhoneVisible ? c.ownerMobile : null,
@@ -93,7 +91,6 @@ export class CarsController {
     return { success: true, data: safe, total: safe.length };
   }
 
-  /** My cars (owner) */
   @Get('my')
   @UseGuards(JwtAuthGuard)
   findMy(@Request() req: any) {
@@ -101,7 +98,6 @@ export class CarsController {
     return { success: true, data: list };
   }
 
-  /** Single car */
   @Get(':id')
   findOne(@Param('id') id: string) {
     const car = this.carsService.findById(id);
@@ -117,7 +113,6 @@ export class CarsController {
     };
   }
 
-  /** Toggle phone visibility */
   @Patch(':id/visibility')
   @UseGuards(JwtAuthGuard)
   updateVisibility(
@@ -129,7 +124,6 @@ export class CarsController {
     return { success: true, data: car };
   }
 
-  /** Soft delete */
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   remove(@Param('id') id: string, @Request() req: any) {
