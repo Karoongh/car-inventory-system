@@ -1,4 +1,5 @@
-// Prisma schema – full models will be added in Task 2
+// Prisma schema – Car Inventory System
+// Generated according to Domain Value Objects & Entities (Task 2)
 
 generator client {
   provider = "prisma-client-js"
@@ -9,4 +10,156 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Placeholder – real entities arrive in Task 2
+enum UserRole {
+  Owner
+  Admin
+}
+
+enum BodyConditionType {
+  ZERO_KM_DRY
+  NO_PAINT_NO_SCRATCH
+  NO_PAINT_MINOR_SCRATCH
+  ONE_PART_PAINTED
+  TWO_PARTS_PAINTED
+  THREE_PARTS_PAINTED
+  FULL_PAINT
+}
+
+enum ChassisConditionType {
+  HEALTHY_AND_SEALED
+  IMPACTED
+}
+
+enum EngineConditionType {
+  HEALTHY_AND_SEALED
+  RECENTLY_REPAIRED
+  NEEDS_REPAIR
+}
+
+enum GearboxConditionType {
+  HEALTHY_AND_SEALED
+  RECENTLY_REPAIRED
+  NEEDS_REPAIR
+}
+
+enum PriceOfferType {
+  CASH_ONLY
+  EXCHANGEABLE
+  INSTALLMENT
+}
+
+enum DocumentStatusType {
+  COMPLETE_AND_READY
+  HAS_PROBLEM
+}
+
+model User {
+  id        String   @id @default(cuid())
+  mobile    String   @unique
+  fullName  String?
+  role      UserRole @default(Owner)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cars Car[]
+
+  @@index([mobile])
+  @@map("users")
+}
+
+model Car {
+  id                      String   @id @default(cuid())
+  brand                   String
+  model                   String
+  trim                    String
+  year                    Int
+  thirdPartyInsuranceDate DateTime?
+  hasBodyInsurance        Boolean  @default(false)
+  color                   String
+
+  // Body Condition (stored as structured JSON + enum for filtering)
+  bodyConditionType       BodyConditionType
+  bodyPaintedParts        String[]          @default([]) // array of BodyPart values
+  bodyDescription         String?
+
+  // Chassis
+  chassisConditionType    ChassisConditionType
+  chassisImpactAreas      String[]          @default([])
+  chassisDescription      String?
+
+  // Engine
+  engineConditionType     EngineConditionType
+  engineDescription       String?
+
+  // Gearbox
+  gearboxConditionType    GearboxConditionType
+  gearboxDescription      String?
+
+  // Price Offer
+  priceAmount             BigInt            // تومان (using BigInt for large numbers)
+  priceType               PriceOfferType
+  exchangeDetails         String?
+  installmentDetails      String?
+
+  // Owner contact (denormalized for performance + visibility control)
+  ownerFullName           String
+  ownerMobile             String
+  isPhoneVisible          Boolean           @default(true)
+
+  // Documents
+  documentStatusType      DocumentStatusType
+  documentProblemDesc     String?
+
+  // Images (WebP paths)
+  images                  String[]          @default([])
+
+  isActive                Boolean           @default(true)
+  ownerId                 String
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+
+  owner                   User              @relation(fields: [ownerId], references: [id])
+
+  // Indexes for common filters & search
+  @@index([brand])
+  @@index([model])
+  @@index([year])
+  @@index([priceAmount])
+  @@index([color])
+  @@index([bodyConditionType])
+  @@index([isActive])
+  @@index([ownerId])
+  @@index([brand, model, year])
+  @@index([isActive, brand, priceAmount])
+  @@map("cars")
+}
+
+// Daily average market price from Divar (for chart)
+model MarketPriceHistory {
+  id          String   @id @default(cuid())
+  brand       String
+  model       String
+  year        Int?
+  averagePrice BigInt
+  sampleCount Int      @default(0)
+  fetchedAt   DateTime @default(now())
+
+  @@index([brand, model, year, fetchedAt])
+  @@map("market_price_history")
+}
+
+// Simple audit log for sensitive actions
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@map("audit_logs")
+}
