@@ -1,9 +1,12 @@
 import { IImageProcessor, ImageProcessorOptions, ProcessedImage, ImageSize } from './image-processor.types';
+import { randomUUID } from 'crypto';
+import * as path from 'path';
+import * as fs from 'fs/promises';
 
 /**
- * Skeleton of the centralized image processor.
- * Full implementation (sharp + resize + WebP) will be completed in Task 4.
- * All image processing MUST go through this service – no duplication allowed.
+ * Centralized Image Processor using sharp.
+ * All car images MUST go through this service.
+ * Converts to WebP, resizes to standard sizes, compresses.
  */
 export class ImageProcessorService implements IImageProcessor {
   private readonly quality: number;
@@ -21,11 +24,37 @@ export class ImageProcessorService implements IImageProcessor {
   }
 
   async process(fileBuffer: Buffer, originalFilename: string): Promise<ProcessedImage[]> {
-    // TODO (Task 4): implement with sharp
-    // 1. Validate buffer
-    // 2. Generate UUID-based filename
-    // 3. For each size → resize + convert to WebP + save
-    // 4. Return array of ProcessedImage
-    throw new Error('ImageProcessorService.process() not implemented yet – will be completed in Task 4');
+    // Dynamic import to avoid issues if sharp is not installed in some environments
+    const sharp = (await import('sharp')).default;
+
+    await fs.mkdir(this.uploadDir, { recursive: true });
+
+    const baseId = randomUUID();
+    const results: ProcessedImage[] = [];
+
+    for (const [sizeName, dimensions] of Object.entries(this.sizes) as [ImageSize, { width: number; height: number }][]) {
+      const filename = `${baseId}-${sizeName}.webp`;
+      const outputPath = path.join(this.uploadDir, filename);
+
+      await sharp(fileBuffer)
+        .rotate() // auto-orient based on EXIF
+        .resize(dimensions.width, dimensions.height, {
+          fit: 'cover',
+          position: 'centre',
+        })
+        .webp({ quality: this.quality })
+        .toFile(outputPath);
+
+      results.push({
+        size: sizeName,
+        width: dimensions.width,
+        height: dimensions.height,
+        format: 'webp',
+        path: outputPath,
+        filename,
+      });
+    }
+
+    return results;
   }
 }
