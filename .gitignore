@@ -1,0 +1,41 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build
+dist
+.build
+.next
+out
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea
+.vscode
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Prisma
+packages/infrastructure/prisma/*.db
+packages/infrastructure/prisma/migrations/**/migration_lock.toml
+
+# Uploads (local)
+uploads/
+tmp/
+
+# Turbo
+.turbo
+
+# Coverage
+coverage

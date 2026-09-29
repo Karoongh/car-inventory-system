@@ -1,0 +1,12 @@
+// Prisma schema – full models will be added in Task 2
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Placeholder – real entities arrive in Task 2
