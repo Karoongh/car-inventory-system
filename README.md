@@ -2,67 +2,83 @@
 
 سیستم مدیریت و معرفی هوشمند خودروهای مشتریان تعمیرگاه
 
-## Architecture
+**وضعیت پروژه:** تمام ۸ تسک اصلی تکمیل شده است.
 
-Monorepo built with:
-- **apps/api** – NestJS (Clean Architecture)
-- **apps/web** – Next.js 14+ App Router
-- **packages/domain** – Entities & Value Objects
-- **packages/shared** – Types, constants, validators
-- **packages/infrastructure** – Prisma, Redis, Image Processor (sharp), Storage
+## امکانات اصلی
 
-All code must follow the principles defined in the companion repository:
+- ثبت‌نام / ورود مالک فقط با OTP موبایل
+- فرم کامل ثبت خودرو (برند، مدل، تیپ، سال، بیمه، رنگ، شرایط بدنه با قطعات، شاسی، موتور، گیربکس، قیمت و نوع فروش، مدارک، تصاویر)
+- بهینه‌سازی خودکار تصاویر (WebP + سه سایز استاندارد)
+- مخفی کردن شماره تماس و حذف نرم توسط مالک
+- لیست عمومی با جستجو و فیلترهای پیشرفته (موبایل‌فرست)
+- نمودار موقعیت قیمت نسبت به میانگین بازار (خاکستری → سبز → زرد → نارنجی → قرمز)
+- پیشنهاد خودروهای مشابه (هوشمند)
+- صفحه سلب مسئولیت کامل
+- پنل ادمین ساده
+- صفحه embed برای قرار دادن در وب‌سایت تعمیرگاه
+- اسکلت بکاپ روزانه دیتابیس
+
+## معماری
+
+- **Clean Architecture** + DDD سبک
+- Monorepo با pnpm workspaces
+- `apps/api` – NestJS
+- `apps/web` – Next.js 14 (App Router) – کاملاً Mobile-First و RTL
+- `packages/domain` – Entities & Value Objects
+- `packages/shared` – Types مشترک
+- `packages/infrastructure` – Image processor (sharp) + Market price service
+
+اصول کدنویسی:  
 → https://github.com/Karoongh/car-inventory-system-principles
 
-## Prerequisites
-
-- Node.js ≥ 20
-- pnpm ≥ 9
-- Docker & Docker Compose
-
-## Quick Start
+## شروع سریع (توسعه)
 
 ```bash
-# 1. Clone
 git clone https://github.com/Karoongh/car-inventory-system.git
 cd car-inventory-system
-
-# 2. Install dependencies
 pnpm install
-
-# 3. Copy environment
 cp .env.example .env
-
-# 4. Start infrastructure
 docker compose up -d
-
-# 5. Generate Prisma client & run migrations (after Task 2)
-pnpm db:generate
-pnpm db:migrate
-
-# 6. Run development servers
 pnpm dev
 ```
 
-- API: http://localhost:3001
-- Web: http://localhost:3000
+- وب: http://localhost:3000
+- API: http://localhost:3001/api/v1
 
-## Image Processing
+## مسیرهای مهم
 
-All uploaded car images are automatically:
-- Converted to WebP
-- Resized to thumbnail (400×300), medium (800×600), large (1200×900)
-- Compressed (quality 80 by default)
+| مسیر | توضیح |
+|------|--------|
+| `/` | صفحه اصلی |
+| `/auth/login` | ورود با OTP |
+| `/dashboard` | پنل مالک |
+| `/cars/new` | ثبت خودروی جدید |
+| `/cars` | لیست عمومی + فیلتر |
+| `/cars/[id]` | جزئیات + نمودار قیمت + پیشنهاد مشابه |
+| `/disclaimer` | سلب مسئولیت |
+| `/admin` | پنل ادمین |
+| `/embed` | ویجت قابل قرار دادن در سایت تعمیرگاه |
 
-See `docs/image-processing.md`.
+## تسک‌های انجام‌شده
 
-## Task Progress
+- [x] تسک ۱ – ساختار پروژه + اصول کدنویسی
+- [x] تسک ۲ – Domain + Prisma Schema
+- [x] تسک ۳ – احراز هویت OTP
+- [x] تسک ۴ – CRUD خودرو + آپلود و بهینه‌سازی تصویر
+- [x] تسک ۵ – لیست عمومی + فیلتر + SEO
+- [x] تسک ۶ – موقعیت قیمت نسبت به بازار + نمودار رنگی
+- [x] تسک ۷ – پیشنهاد هوشمند + سلب مسئولیت + پنل ادمین
+- [x] تسک ۸ – بکاپ روزانه + امنیت + embed + مستندات نهایی
 
-- [x] Task 1 – Project foundation & principles
-- [ ] Task 2 – Domain & Database Schema
-- [ ] Task 3 – OTP Authentication
-- [ ] Task 4 – Car CRUD + Advanced Form + Image Upload
-- [ ] Task 5 – Public Listing + Filters
-- [ ] Task 6 – Divar Price Scraper + Chart
-- [ ] Task 7 – Smart Suggestions + Disclaimer + Admin Panel
-- [ ] Task 8 – Daily Backup + Security Hardening + Embed Ready
+## مراحل بعدی پیشنهادی (پس از این نسخه)
+
+1. اتصال واقعی Prisma به جای in-memory store
+2. انتقال OTP و session به Redis
+3. اتصال درگاه پیامک واقعی (SMS.ir / Kavenegar)
+4. اسکرپر واقعی دیوار با rate-limit و cache
+5. استقرار روی VPS با HTTPS
+6. افزودن نقش Admin واقعی و پنل مدیریتی غنی‌تر
+
+## مجوز
+
+خصوصی – متعلق به صاحب پروژه.
