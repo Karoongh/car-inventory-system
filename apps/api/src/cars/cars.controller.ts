@@ -18,7 +18,7 @@ import { memoryStorage } from 'multer';
 import { CarsService } from './cars.service';
 import { CreateCarDto } from './dto/create-car.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { ImageProcessorService } from '@car-inventory/infrastructure';
+import { ImageProcessorService, MarketPriceService } from '@car-inventory/infrastructure';
 
 @Controller('cars')
 export class CarsController {
@@ -26,6 +26,8 @@ export class CarsController {
     quality: Number(process.env.IMAGE_QUALITY) || 80,
     uploadDir: process.env.UPLOAD_DIR || './uploads',
   });
+
+  private readonly marketPriceService = new MarketPriceService();
 
   constructor(private readonly carsService: CarsService) {}
 
@@ -96,6 +98,24 @@ export class CarsController {
   findMy(@Request() req: any) {
     const list = this.carsService.findByOwner(req.user.id);
     return { success: true, data: list };
+  }
+
+  /** Price position relative to market (for chart) */
+  @Get(':id/price-position')
+  async getPricePosition(@Param('id') id: string) {
+    const car = this.carsService.findById(id);
+    if (!car || !car.isActive) {
+      return { success: false, message: 'خودرو یافت نشد' };
+    }
+
+    const position = await this.marketPriceService.calculatePosition(
+      car.priceAmount,
+      car.brand,
+      car.model,
+      car.year,
+    );
+
+    return { success: true, data: position };
   }
 
   @Get(':id')

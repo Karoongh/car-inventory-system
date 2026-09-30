@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import PricePositionChart from '@/components/PricePositionChart';
 
 const BODY_LABELS: Record<string, string> = {
   ZERO_KM_DRY: 'صفر کیلومتر خشک',
@@ -74,7 +75,6 @@ export default function CarDetailPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-28">
-      {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-20">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
           <button onClick={() => router.back()} className="text-slate-600 text-lg">→</button>
@@ -85,13 +85,11 @@ export default function CarDetailPage() {
       </header>
 
       <main className="max-w-lg mx-auto">
-        {/* Image area */}
         <div className="aspect-[16/10] bg-slate-200 flex items-center justify-center text-slate-400 text-sm">
           {car.images?.length > 0 ? 'گالری تصاویر' : 'بدون تصویر'}
         </div>
 
         <div className="px-4 py-5 space-y-5">
-          {/* Title & Price */}
           <div>
             <h2 className="text-xl font-bold text-slate-800">
               {car.brand} {car.model} {car.trim}
@@ -106,7 +104,9 @@ export default function CarDetailPage() {
             </span>
           </div>
 
-          {/* Specs */}
+          {/* Price Position Chart */}
+          <PricePositionChart carId={car.id} />
+
           <section className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
             <h3 className="font-semibold text-slate-800">مشخصات</h3>
             <Row label="شرایط بدنه" value={BODY_LABELS[car.bodyConditionType] || car.bodyConditionType} />
@@ -120,7 +120,6 @@ export default function CarDetailPage() {
             <Row label="وضعیت مدارک" value={DOC_LABELS[car.documentStatusType] || car.documentStatusType} />
           </section>
 
-          {/* Seller */}
           <section className="bg-white rounded-2xl p-4 shadow-sm">
             <h3 className="font-semibold text-slate-800 mb-3">فروشنده</h3>
             <p className="text-sm text-slate-700">{car.ownerFullName}</p>
@@ -136,7 +135,6 @@ export default function CarDetailPage() {
             )}
           </section>
 
-          {/* Disclaimer */}
           <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 text-xs text-amber-800 leading-relaxed">
             <strong>سلب مسئولیت:</strong> تعمیرگاه هیچ‌گونه مسئولیتی در قبال معامله بین خریدار و فروشنده ندارد.
             مسئولیت بررسی صحت اطلاعات، وضعیت فنی و مدارک خودرو بر عهده طرفین معامله است.
@@ -144,7 +142,6 @@ export default function CarDetailPage() {
         </div>
       </main>
 
-      {/* Sticky Call CTA */}
       {car.isPhoneVisible && car.ownerMobile && (
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 z-30">
           <div className="max-w-lg mx-auto">
