@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import PricePositionChart from '@/components/PricePositionChart';
+import SimilarCars from '@/components/SimilarCars';
 
 const BODY_LABELS: Record<string, string> = {
   ZERO_KM_DRY: 'صفر کیلومتر خشک',
@@ -104,7 +105,6 @@ export default function CarDetailPage() {
             </span>
           </div>
 
-          {/* Price Position Chart */}
           <PricePositionChart carId={car.id} />
 
           <section className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
@@ -135,9 +135,19 @@ export default function CarDetailPage() {
             )}
           </section>
 
+          {/* Smart suggestions */}
+          <SimilarCars
+            brand={car.brand}
+            model={car.model}
+            year={car.year}
+            maxPrice={car.priceAmount}
+            excludeId={car.id}
+          />
+
           <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 text-xs text-amber-800 leading-relaxed">
             <strong>سلب مسئولیت:</strong> تعمیرگاه هیچ‌گونه مسئولیتی در قبال معامله بین خریدار و فروشنده ندارد.
             مسئولیت بررسی صحت اطلاعات، وضعیت فنی و مدارک خودرو بر عهده طرفین معامله است.
+            <Link href="/disclaimer" className="underline mr-1 text-amber-900">مشاهده متن کامل</Link>
           </div>
         </div>
       </main>

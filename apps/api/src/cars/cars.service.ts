@@ -90,6 +90,12 @@ export class CarsService {
     return Array.from(this.cars.values()).filter((c) => c.ownerId === ownerId && c.isActive);
   }
 
+  findAllActive(): StoredCar[] {
+    return Array.from(this.cars.values())
+      .filter((c) => c.isActive)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
   findPublic(filters?: {
     brand?: string;
     model?: string;
@@ -125,8 +131,48 @@ export class CarsService {
       );
     }
 
-    // newest first
     return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  /** Smart suggestions based on similarity to a reference car or loose preferences */
+  findSuggestions(options: {
+    excludeId?: string;
+    brand?: string;
+    model?: string;
+    year?: number;
+    maxPrice?: number;
+    limit?: number;
+  }): StoredCar[] {
+    const limit = options.limit ?? 6;
+    let list = Array.from(this.cars.values()).filter((c) => c.isActive);
+
+    if (options.excludeId) {
+      list = list.filter((c) => c.id !== options.excludeId);
+    }
+
+    // Score each car
+    const scored = list.map((car) => {
+      let score = 0;
+
+      if (options.brand && car.brand.toLowerCase().includes(options.brand.toLowerCase())) score += 40;
+      if (options.model && car.model.toLowerCase().includes(options.model.toLowerCase())) score += 30;
+      if (options.year) {
+        const yearDiff = Math.abs(car.year - options.year);
+        if (yearDiff === 0) score += 20;
+        else if (yearDiff <= 2) score += 12;
+        else if (yearDiff <= 4) score += 5;
+      }
+      if (options.maxPrice && car.priceAmount <= options.maxPrice * 1.15) score += 15;
+      if (car.bodyConditionType === 'ZERO_KM_DRY' || car.bodyConditionType === 'NO_PAINT_NO_SCRATCH') score += 5;
+
+      return { car, score };
+    });
+
+    return scored
+      .filter((s) => s.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit)
+      .map((s) => s.car);
   }
 
   updateVisibility(id: string, ownerId: string, isPhoneVisible: boolean): StoredCar {
@@ -144,6 +190,14 @@ export class CarsService {
     if (!car) throw new NotFoundException('خودرو یافت نشد');
     if (car.ownerId !== ownerId) throw new ForbiddenException('دسترسی غیرمجاز');
 
+    car.isActive = false;
+    car.updatedAt = new Date().toISOString();
+  }
+
+  /** Admin hard soft-delete without owner check */
+  adminSoftDelete(id: string): void {
+    const car = this.cars.get(id);
+    if (!car) throw new NotFoundException('خودرو یافت نشد');
     car.isActive = false;
     car.updatedAt = new Date().toISOString();
   }

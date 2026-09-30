@@ -22,11 +22,17 @@ export default function HomePage() {
           >
             مشاهده خودروهای موجود
           </Link>
+          <Link
+            href="/disclaimer"
+            className="block w-full h-10 rounded-xl text-slate-500 text-sm flex items-center justify-center"
+          >
+            سلب مسئولیت و شرایط استفاده
+          </Link>
         </div>
       </div>
 
       <footer className="py-4 text-center text-xs text-slate-400">
-        نسخه اولیه – تسک ۳ تکمیل شد
+        نسخه فعلی – تسک ۷ تکمیل شد
       </footer>
     </main>
   );

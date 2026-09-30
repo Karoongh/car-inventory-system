@@ -93,6 +93,33 @@ export class CarsController {
     return { success: true, data: safe, total: safe.length };
   }
 
+  /** Smart suggestions */
+  @Get('suggestions')
+  getSuggestions(
+    @Query('brand') brand?: string,
+    @Query('model') model?: string,
+    @Query('year') year?: string,
+    @Query('maxPrice') maxPrice?: string,
+    @Query('excludeId') excludeId?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const list = this.carsService.findSuggestions({
+      brand,
+      model,
+      year: year ? Number(year) : undefined,
+      maxPrice: maxPrice ? Number(maxPrice) : undefined,
+      excludeId,
+      limit: limit ? Number(limit) : 6,
+    });
+
+    const safe = list.map((c) => ({
+      ...c,
+      ownerMobile: c.isPhoneVisible ? c.ownerMobile : null,
+    }));
+
+    return { success: true, data: safe };
+  }
+
   @Get('my')
   @UseGuards(JwtAuthGuard)
   findMy(@Request() req: any) {
@@ -100,7 +127,18 @@ export class CarsController {
     return { success: true, data: list };
   }
 
-  /** Price position relative to market (for chart) */
+  /** Admin: list all active cars */
+  @Get('admin/all')
+  @UseGuards(JwtAuthGuard)
+  adminList(@Request() req: any) {
+    // Simple role check (in-memory users have role)
+    if (req.user.role !== 'Admin') {
+      return { success: false, message: 'دسترسی محدود به ادمین' };
+    }
+    const list = this.carsService.findAllActive();
+    return { success: true, data: list, total: list.length };
+  }
+
   @Get(':id/price-position')
   async getPricePosition(@Param('id') id: string) {
     const car = this.carsService.findById(id);
@@ -149,5 +187,16 @@ export class CarsController {
   remove(@Param('id') id: string, @Request() req: any) {
     this.carsService.softDelete(id, req.user.id);
     return { success: true, message: 'خودرو با موفقیت حذف شد' };
+  }
+
+  /** Admin delete */
+  @Delete('admin/:id')
+  @UseGuards(JwtAuthGuard)
+  adminRemove(@Param('id') id: string, @Request() req: any) {
+    if (req.user.role !== 'Admin') {
+      return { success: false, message: 'دسترسی محدود به ادمین' };
+    }
+    this.carsService.adminSoftDelete(id);
+    return { success: true, message: 'خودرو توسط ادمین حذف شد' };
   }
 }
