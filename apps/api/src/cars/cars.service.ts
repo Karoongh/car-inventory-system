@@ -1,50 +1,13 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { CreateCarDto } from './dto/create-car.dto';
-import { randomUUID } from 'crypto';
-
-export interface StoredCar {
-  id: string;
-  ownerId: string;
-  brand: string;
-  model: string;
-  trim: string;
-  year: number;
-  thirdPartyInsuranceDate: string | null;
-  hasBodyInsurance: boolean;
-  color: string;
-  bodyConditionType: string;
-  bodyPaintedParts: string[];
-  bodyDescription: string | null;
-  chassisConditionType: string;
-  chassisImpactAreas: string[];
-  chassisDescription: string | null;
-  engineConditionType: string;
-  engineDescription: string | null;
-  gearboxConditionType: string;
-  gearboxDescription: string | null;
-  priceAmount: number;
-  priceType: string;
-  exchangeDetails: string | null;
-  installmentDetails: string | null;
-  ownerFullName: string;
-  ownerMobile: string;
-  isPhoneVisible: boolean;
-  documentStatusType: string;
-  documentProblemDesc: string | null;
-  images: string[];
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+import { PrismaCarRepository, CarRecord } from '@car-inventory/infrastructure';
 
 @Injectable()
 export class CarsService {
-  private readonly cars = new Map<string, StoredCar>();
+  private readonly carRepo = new PrismaCarRepository();
 
-  create(dto: CreateCarDto, ownerId: string, imageFilenames: string[] = []): StoredCar {
-    const now = new Date().toISOString();
-    const car: StoredCar = {
-      id: randomUUID(),
+  async create(dto: CreateCarDto, ownerId: string, imageFilenames: string[] = []): Promise<CarRecord> {
+    return this.carRepo.create({
       ownerId,
       brand: dto.brand,
       model: dto.model,
@@ -73,30 +36,22 @@ export class CarsService {
       documentStatusType: dto.documentStatusType,
       documentProblemDesc: dto.documentProblemDesc ?? null,
       images: imageFilenames,
-      isActive: true,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    this.cars.set(car.id, car);
-    return car;
+    });
   }
 
-  findById(id: string): StoredCar | null {
-    return this.cars.get(id) ?? null;
+  async findById(id: string): Promise<CarRecord | null> {
+    return this.carRepo.findById(id);
   }
 
-  findByOwner(ownerId: string): StoredCar[] {
-    return Array.from(this.cars.values()).filter((c) => c.ownerId === ownerId && c.isActive);
+  async findByOwner(ownerId: string): Promise<CarRecord[]> {
+    return this.carRepo.findMany({ ownerId, isActive: true });
   }
 
-  findAllActive(): StoredCar[] {
-    return Array.from(this.cars.values())
-      .filter((c) => c.isActive)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  async findAllActive(): Promise<CarRecord[]> {
+    return this.carRepo.findMany({ isActive: true });
   }
 
-  findPublic(filters?: {
+  async findPublic(filters?: {
     brand?: string;
     model?: string;
     yearFrom?: number;
@@ -104,56 +59,30 @@ export class CarsService {
     minPrice?: number;
     maxPrice?: number;
     search?: string;
-  }): StoredCar[] {
-    let list = Array.from(this.cars.values()).filter((c) => c.isActive);
-
-    if (filters?.brand) {
-      const q = filters.brand.toLowerCase();
-      list = list.filter((c) => c.brand.toLowerCase().includes(q));
-    }
-    if (filters?.model) {
-      const q = filters.model.toLowerCase();
-      list = list.filter((c) => c.model.toLowerCase().includes(q));
-    }
-    if (filters?.yearFrom) list = list.filter((c) => c.year >= filters.yearFrom!);
-    if (filters?.yearTo) list = list.filter((c) => c.year <= filters.yearTo!);
-    if (filters?.minPrice) list = list.filter((c) => c.priceAmount >= filters.minPrice!);
-    if (filters?.maxPrice) list = list.filter((c) => c.priceAmount <= filters.maxPrice!);
-
-    if (filters?.search) {
-      const q = filters.search.toLowerCase();
-      list = list.filter(
-        (c) =>
-          c.brand.toLowerCase().includes(q) ||
-          c.model.toLowerCase().includes(q) ||
-          c.trim.toLowerCase().includes(q) ||
-          c.color.toLowerCase().includes(q),
-      );
-    }
-
-    return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }): Promise<CarRecord[]> {
+    return this.carRepo.findMany({
+      ...filters,
+      isActive: true,
+    });
   }
 
-  /** Smart suggestions based on similarity to a reference car or loose preferences */
-  findSuggestions(options: {
+  async findSuggestions(options: {
     excludeId?: string;
     brand?: string;
     model?: string;
     year?: number;
     maxPrice?: number;
     limit?: number;
-  }): StoredCar[] {
+  }): Promise<CarRecord[]> {
     const limit = options.limit ?? 6;
-    let list = Array.from(this.cars.values()).filter((c) => c.isActive);
+    let list = await this.carRepo.findMany({ isActive: true });
 
     if (options.excludeId) {
       list = list.filter((c) => c.id !== options.excludeId);
     }
 
-    // Score each car
     const scored = list.map((car) => {
       let score = 0;
-
       if (options.brand && car.brand.toLowerCase().includes(options.brand.toLowerCase())) score += 40;
       if (options.model && car.model.toLowerCase().includes(options.model.toLowerCase())) score += 30;
       if (options.year) {
@@ -164,7 +93,6 @@ export class CarsService {
       }
       if (options.maxPrice && car.priceAmount <= options.maxPrice * 1.15) score += 15;
       if (car.bodyConditionType === 'ZERO_KM_DRY' || car.bodyConditionType === 'NO_PAINT_NO_SCRATCH') score += 5;
-
       return { car, score };
     });
 
@@ -175,30 +103,27 @@ export class CarsService {
       .map((s) => s.car);
   }
 
-  updateVisibility(id: string, ownerId: string, isPhoneVisible: boolean): StoredCar {
-    const car = this.cars.get(id);
-    if (!car) throw new NotFoundException('خودرو یافت نشد');
-    if (car.ownerId !== ownerId) throw new ForbiddenException('دسترسی غیرمجاز');
-
-    car.isPhoneVisible = isPhoneVisible;
-    car.updatedAt = new Date().toISOString();
-    return car;
+  async updateVisibility(id: string, ownerId: string, isPhoneVisible: boolean): Promise<CarRecord> {
+    try {
+      return await this.carRepo.updateVisibility(id, ownerId, isPhoneVisible);
+    } catch {
+      throw new ForbiddenException('دسترسی غیرمجاز یا خودرو یافت نشد');
+    }
   }
 
-  softDelete(id: string, ownerId: string): void {
-    const car = this.cars.get(id);
-    if (!car) throw new NotFoundException('خودرو یافت نشد');
-    if (car.ownerId !== ownerId) throw new ForbiddenException('دسترسی غیرمجاز');
-
-    car.isActive = false;
-    car.updatedAt = new Date().toISOString();
+  async softDelete(id: string, ownerId: string): Promise<void> {
+    try {
+      await this.carRepo.softDelete(id, ownerId);
+    } catch {
+      throw new ForbiddenException('دسترسی غیرمجاز یا خودرو یافت نشد');
+    }
   }
 
-  /** Admin hard soft-delete without owner check */
-  adminSoftDelete(id: string): void {
-    const car = this.cars.get(id);
-    if (!car) throw new NotFoundException('خودرو یافت نشد');
-    car.isActive = false;
-    car.updatedAt = new Date().toISOString();
+  async adminSoftDelete(id: string): Promise<void> {
+    try {
+      await this.carRepo.softDelete(id);
+    } catch {
+      throw new NotFoundException('خودرو یافت نشد');
+    }
   }
 }

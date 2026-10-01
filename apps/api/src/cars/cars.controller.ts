@@ -61,12 +61,12 @@ export class CarsController {
     }
 
     const ownerId = req.user.id;
-    const car = this.carsService.create(dto, ownerId, imageFilenames);
+    const car = await this.carsService.create(dto, ownerId, imageFilenames);
     return { success: true, data: car };
   }
 
   @Get()
-  findPublic(
+  async findPublic(
     @Query('brand') brand?: string,
     @Query('model') model?: string,
     @Query('yearFrom') yearFrom?: string,
@@ -75,7 +75,7 @@ export class CarsController {
     @Query('maxPrice') maxPrice?: string,
     @Query('search') search?: string,
   ) {
-    const list = this.carsService.findPublic({
+    const list = await this.carsService.findPublic({
       brand,
       model,
       yearFrom: yearFrom ? Number(yearFrom) : undefined,
@@ -93,9 +93,8 @@ export class CarsController {
     return { success: true, data: safe, total: safe.length };
   }
 
-  /** Smart suggestions */
   @Get('suggestions')
-  getSuggestions(
+  async getSuggestions(
     @Query('brand') brand?: string,
     @Query('model') model?: string,
     @Query('year') year?: string,
@@ -103,7 +102,7 @@ export class CarsController {
     @Query('excludeId') excludeId?: string,
     @Query('limit') limit?: string,
   ) {
-    const list = this.carsService.findSuggestions({
+    const list = await this.carsService.findSuggestions({
       brand,
       model,
       year: year ? Number(year) : undefined,
@@ -122,26 +121,24 @@ export class CarsController {
 
   @Get('my')
   @UseGuards(JwtAuthGuard)
-  findMy(@Request() req: any) {
-    const list = this.carsService.findByOwner(req.user.id);
+  async findMy(@Request() req: any) {
+    const list = await this.carsService.findByOwner(req.user.id);
     return { success: true, data: list };
   }
 
-  /** Admin: list all active cars */
   @Get('admin/all')
   @UseGuards(JwtAuthGuard)
-  adminList(@Request() req: any) {
-    // Simple role check (in-memory users have role)
+  async adminList(@Request() req: any) {
     if (req.user.role !== 'Admin') {
       return { success: false, message: 'دسترسی محدود به ادمین' };
     }
-    const list = this.carsService.findAllActive();
+    const list = await this.carsService.findAllActive();
     return { success: true, data: list, total: list.length };
   }
 
   @Get(':id/price-position')
   async getPricePosition(@Param('id') id: string) {
-    const car = this.carsService.findById(id);
+    const car = await this.carsService.findById(id);
     if (!car || !car.isActive) {
       return { success: false, message: 'خودرو یافت نشد' };
     }
@@ -157,8 +154,8 @@ export class CarsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    const car = this.carsService.findById(id);
+  async findOne(@Param('id') id: string) {
+    const car = await this.carsService.findById(id);
     if (!car || !car.isActive) {
       return { success: false, message: 'خودرو یافت نشد' };
     }
@@ -173,30 +170,29 @@ export class CarsController {
 
   @Patch(':id/visibility')
   @UseGuards(JwtAuthGuard)
-  updateVisibility(
+  async updateVisibility(
     @Param('id') id: string,
     @Body('isPhoneVisible') isPhoneVisible: boolean,
     @Request() req: any,
   ) {
-    const car = this.carsService.updateVisibility(id, req.user.id, isPhoneVisible);
+    const car = await this.carsService.updateVisibility(id, req.user.id, isPhoneVisible);
     return { success: true, data: car };
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
-  remove(@Param('id') id: string, @Request() req: any) {
-    this.carsService.softDelete(id, req.user.id);
+  async remove(@Param('id') id: string, @Request() req: any) {
+    await this.carsService.softDelete(id, req.user.id);
     return { success: true, message: 'خودرو با موفقیت حذف شد' };
   }
 
-  /** Admin delete */
   @Delete('admin/:id')
   @UseGuards(JwtAuthGuard)
-  adminRemove(@Param('id') id: string, @Request() req: any) {
+  async adminRemove(@Param('id') id: string, @Request() req: any) {
     if (req.user.role !== 'Admin') {
       return { success: false, message: 'دسترسی محدود به ادمین' };
     }
-    this.carsService.adminSoftDelete(id);
+    await this.carsService.adminSoftDelete(id);
     return { success: true, message: 'خودرو توسط ادمین حذف شد' };
   }
 }

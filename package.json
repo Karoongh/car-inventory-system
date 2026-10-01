@@ -8,8 +8,10 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
-    "db:generate": "pnpm --filter @car-inventory/infrastructure prisma generate",
-    "db:migrate": "pnpm --filter @car-inventory/infrastructure prisma migrate dev",
+    "db:generate": "pnpm --filter @car-inventory/infrastructure prisma:generate",
+    "db:migrate": "pnpm --filter @car-inventory/infrastructure prisma:migrate",
+    "db:deploy": "pnpm --filter @car-inventory/infrastructure prisma:deploy",
+    "db:studio": "pnpm --filter @car-inventory/infrastructure prisma:studio",
     "setup": "bash scripts/setup-dev.sh"
   },
   "devDependencies": {

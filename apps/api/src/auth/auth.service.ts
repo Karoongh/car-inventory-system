@@ -2,14 +2,11 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { OtpService } from './otp.service';
 import { AuthResponse, AuthUser } from '@car-inventory/shared';
+import { PrismaUserRepository } from '@car-inventory/infrastructure';
 
-/**
- * Temporary in-memory user store for Task 3.
- * Will be replaced by Prisma UserRepository in later tasks.
- */
 @Injectable()
 export class AuthService {
-  private readonly users = new Map<string, AuthUser>();
+  private readonly userRepo = new PrismaUserRepository();
 
   constructor(
     private readonly otpService: OtpService,
@@ -23,24 +20,32 @@ export class AuthService {
   async verifyOtpAndLogin(mobile: string, code: string): Promise<AuthResponse> {
     await this.otpService.verifyOtp(mobile, code);
 
-    let user = this.users.get(mobile);
+    let user = await this.userRepo.findByMobile(mobile);
 
     if (!user) {
-      // auto-register as Owner
-      user = {
-        id: `user_${Date.now()}`,
+      // Auto-register as Owner
+      user = await this.userRepo.create({
         mobile,
-        fullName: null,
         role: 'Owner',
-      };
-      this.users.set(mobile, user);
+      });
+    }
+
+    if (!user.isActive) {
+      throw new UnauthorizedException('حساب کاربری غیرفعال است');
     }
 
     const payload = { sub: user.id, mobile: user.mobile, role: user.role };
     const accessToken = await this.jwtService.signAsync(payload);
 
+    const authUser: AuthUser = {
+      id: user.id,
+      mobile: user.mobile,
+      fullName: user.fullName,
+      role: user.role,
+    };
+
     return {
-      user,
+      user: authUser,
       tokens: {
         accessToken,
         expiresIn: '7d',
@@ -49,9 +54,14 @@ export class AuthService {
   }
 
   async validateUser(userId: string): Promise<AuthUser | null> {
-    for (const user of this.users.values()) {
-      if (user.id === userId) return user;
-    }
-    return null;
+    const user = await this.userRepo.findById(userId);
+    if (!user || !user.isActive) return null;
+
+    return {
+      id: user.id,
+      mobile: user.mobile,
+      fullName: user.fullName,
+      role: user.role,
+    };
   }
 }
